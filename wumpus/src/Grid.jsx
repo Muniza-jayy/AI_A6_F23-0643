@@ -1,6 +1,6 @@
 import Cell from "./Cell";
 
-function Grid({ rows, cols, agentPosition, hazards }) {
+function Grid({ rows, cols, agentPosition, hazards, safeCells }) {
   const grid = [];
 
   for (let row = 0; row < rows; row++) {
@@ -28,6 +28,7 @@ function Grid({ rows, cols, agentPosition, hazards }) {
             col={cell.col}
             agentPosition={agentPosition}
             hazards={hazards}
+            safeCells={safeCells}
           />
         ))
       )}

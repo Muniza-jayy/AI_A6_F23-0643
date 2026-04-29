@@ -1,5 +1,9 @@
-function Cell({ row, col, agentPosition, hazards }) {
+function Cell({ row, col, agentPosition, hazards, safeCells }) {
   const isAgent = agentPosition.row === row && agentPosition.col === col;
+
+  const isSafe = safeCells.some(
+    (cell) => cell.row === row && cell.col === col
+  );
 
   const hasPit = hazards.pits.some(
     (pit) => pit.row === row && pit.col === col
@@ -12,6 +16,10 @@ function Cell({ row, col, agentPosition, hazards }) {
 
   let cellClass = "cell";
   let content = `${row + 1},${col + 1}`;
+
+  if (isSafe) {
+    cellClass += " safe-cell";
+  }
 
   if (hasPit) {
     cellClass += " pit-cell";
