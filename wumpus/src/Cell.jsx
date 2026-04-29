@@ -1,11 +1,34 @@
-function Cell({ row, col, agentPosition }) {
+function Cell({ row, col, agentPosition, hazards }) {
   const isAgent = agentPosition.row === row && agentPosition.col === col;
 
-  return (
-    <div className={`cell ${isAgent ? "agent-cell" : ""}`}>
-      {isAgent ? "🤖" : `${row + 1},${col + 1}`}
-    </div>
+  const hasPit = hazards.pits.some(
+    (pit) => pit.row === row && pit.col === col
   );
+
+  const hasWumpus =
+    hazards.wumpus &&
+    hazards.wumpus.row === row &&
+    hazards.wumpus.col === col;
+
+  let cellClass = "cell";
+  let content = `${row + 1},${col + 1}`;
+
+  if (hasPit) {
+    cellClass += " pit-cell";
+    content = "💀";
+  }
+
+  if (hasWumpus) {
+    cellClass += " wumpus-cell";
+    content = "👾";
+  }
+
+  if (isAgent) {
+    cellClass += " agent-cell";
+    content = "🤖";
+  }
+
+  return <div className={cellClass}>{content}</div>;
 }
 
 export default Cell;

@@ -1,16 +1,13 @@
 import Cell from "./Cell";
 
-function Grid({ rows, cols, agentPosition }) { {
+function Grid({ rows, cols, agentPosition, hazards }) {
   const grid = [];
 
   for (let row = 0; row < rows; row++) {
     const currentRow = [];
 
     for (let col = 0; col < cols; col++) {
-      currentRow.push({
-        row,
-        col,
-      });
+      currentRow.push({ row, col });
     }
 
     grid.push(currentRow);
@@ -20,20 +17,22 @@ function Grid({ rows, cols, agentPosition }) { {
     <div
       className="grid"
       style={{
-        gridTemplateColumns: `repeat(${cols}, 60px)`,
+        gridTemplateColumns: `repeat(${cols}, 78px)`,
       }}
     >
       {grid.map((row) =>
         row.map((cell) => (
           <Cell
-        key={`${cell.row}-${cell.col}`}
-        row={cell.row}
-        col={cell.col}
-        agentPosition={agentPosition}/>
+            key={`${cell.row}-${cell.col}`}
+            row={cell.row}
+            col={cell.col}
+            agentPosition={agentPosition}
+            hazards={hazards}
+          />
         ))
       )}
     </div>
   );
-}}
+}
 
 export default Grid;

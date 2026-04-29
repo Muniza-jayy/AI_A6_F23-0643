@@ -6,6 +6,10 @@ function App() {
   const [rows, setRows] = useState(7);
   const [cols, setCols] = useState(4);
   const [agentPosition, setAgentPosition] = useState({ row: 0, col: 0 });
+  const [hazards, setHazards] = useState({
+  pits: [],
+  wumpus: null,
+});
 
   return (
     <div className="app">
@@ -41,7 +45,7 @@ function App() {
               ))}
             </select>
 
-            <button className="primary-btn">🪄 Generate World</button>
+            <button className="primary-btn" onClick={generateWorld}>🪄 Generate World</button>
             <button className="secondary-btn">↻ Reset World</button>
           </div>
 
@@ -60,7 +64,7 @@ function App() {
 
         <section className="grid-panel">
           <h2>▦ Wumpus World Grid</h2>
-          <Grid rows={rows} cols={cols} agentPosition={agentPosition} />
+          <Grid rows={rows} cols={cols} agentPosition={agentPosition} hazards={hazards} />
         </section>
 
         <aside className="right-panel">
@@ -97,3 +101,37 @@ function App() {
 }
 
 export default App;
+
+function generateWorld() {
+  const pitCount = Math.max(1, Math.floor((rows * cols) * 0.18));
+  const usedCells = new Set(["0-0"]);
+
+  const pits = [];
+
+  while (pits.length < pitCount) {
+    const row = Math.floor(Math.random() * rows);
+    const col = Math.floor(Math.random() * cols);
+    const key = `${row}-${col}`;
+
+    if (!usedCells.has(key)) {
+      pits.push({ row, col });
+      usedCells.add(key);
+    }
+  }
+
+  let wumpus = null;
+
+  while (!wumpus) {
+    const row = Math.floor(Math.random() * rows);
+    const col = Math.floor(Math.random() * cols);
+    const key = `${row}-${col}`;
+
+    if (!usedCells.has(key)) {
+      wumpus = { row, col };
+      usedCells.add(key);
+    }
+  }
+
+  setHazards({ pits, wumpus });
+  setAgentPosition({ row: 0, col: 0 });
+}

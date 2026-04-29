@@ -272,3 +272,15 @@ footer {
 .agent-cell {
   animation: glow 1.5s infinite;
 }
+
+.pit-cell {
+  background: radial-gradient(circle, #ef4444, #7f1d1d);
+  border-color: #f87171;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+}
+
+.wumpus-cell {
+  background: radial-gradient(circle, #9333ea, #4c1d95);
+  border-color: #c084fc;
+  box-shadow: 0 0 25px rgba(168, 85, 247, 0.75);
+}
