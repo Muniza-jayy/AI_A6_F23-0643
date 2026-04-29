@@ -1,15 +1,22 @@
 import { useState } from "react";
 import Grid from "./Grid";
 import "./App.css";
+import { getCurrentPercepts } from "./worldLogic";
 
 function App() {
   const [rows, setRows] = useState(7);
   const [cols, setCols] = useState(4);
   const [agentPosition, setAgentPosition] = useState({ row: 0, col: 0 });
   const [hazards, setHazards] = useState({
-  pits: [],
-  wumpus: null,
-});
+    pits: [],
+    wumpus: null,
+  });
+  const currentPercepts = getCurrentPercepts(
+    agentPosition,
+    hazards,
+    rows,
+    cols);
+
 
   return (
     <div className="app">
@@ -59,6 +66,21 @@ function App() {
           <div className="wood-sign">
             Find the Gold <br />
             Avoid Pits & Wumpus!
+          </div>
+          <div className="card cyan-border">
+            <h2>Current Agent Status</h2>
+
+            <p>
+              <strong>Position:</strong> ({agentPosition.row + 1},{" "}
+              {agentPosition.col + 1})
+            </p>
+
+            <p>
+              <strong>Percepts:</strong>{" "}
+              {!currentPercepts.breeze && !currentPercepts.stench && "None"}
+              {currentPercepts.breeze && "🌀 Breeze "}
+              {currentPercepts.stench && "〰️ Stench"}
+            </p>
           </div>
         </aside>
 
