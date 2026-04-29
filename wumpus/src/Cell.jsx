@@ -1,7 +1,9 @@
-function Cell({ row, col }) {
+function Cell({ row, col, agentPosition }) {
+  const isAgent = agentPosition.row === row && agentPosition.col === col;
+
   return (
-    <div className="cell">
-      {row + 1},{col + 1}
+    <div className={`cell ${isAgent ? "agent-cell" : ""}`}>
+      {isAgent ? "🤖" : `${row + 1},${col + 1}`}
     </div>
   );
 }

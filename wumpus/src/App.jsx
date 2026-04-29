@@ -5,6 +5,7 @@ import "./App.css";
 function App() {
   const [rows, setRows] = useState(7);
   const [cols, setCols] = useState(4);
+  const [agentPosition, setAgentPosition] = useState({ row: 0, col: 0 });
 
   return (
     <div className="app">
@@ -59,7 +60,7 @@ function App() {
 
         <section className="grid-panel">
           <h2>▦ Wumpus World Grid</h2>
-          <Grid rows={rows} cols={cols} />
+          <Grid rows={rows} cols={cols} agentPosition={agentPosition} />
         </section>
 
         <aside className="right-panel">

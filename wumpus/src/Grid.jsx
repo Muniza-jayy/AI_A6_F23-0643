@@ -1,6 +1,6 @@
 import Cell from "./Cell";
 
-function Grid({ rows, cols }) {
+function Grid({ rows, cols, agentPosition }) { {
   const grid = [];
 
   for (let row = 0; row < rows; row++) {
@@ -25,11 +25,15 @@ function Grid({ rows, cols }) {
     >
       {grid.map((row) =>
         row.map((cell) => (
-          <Cell key={`${cell.row}-${cell.col}`} row={cell.row} col={cell.col} />
+          <Cell
+        key={`${cell.row}-${cell.col}`}
+        row={cell.row}
+        col={cell.col}
+        agentPosition={agentPosition}/>
         ))
       )}
     </div>
   );
-}
+}}
 
 export default Grid;
