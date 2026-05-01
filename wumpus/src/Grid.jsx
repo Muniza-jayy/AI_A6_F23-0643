@@ -22,14 +22,15 @@ function Grid({ rows, cols, agentPosition, hazards, safeCells }) {
     >
       {grid.map((row) =>
         row.map((cell) => (
-          <Cell
-            key={`${cell.row}-${cell.col}`}
-            row={cell.row}
-            col={cell.col}
-            agentPosition={agentPosition}
-            hazards={hazards}
-            safeCells={safeCells}
-          />
+       <Cell
+  row={cell.row}
+  col={cell.col}
+  agentPosition={agentPosition}
+  hazards={hazards}
+  safeCells={safeCells}
+  rows={rows}
+  cols={cols}
+/>
         ))
       )}
     </div>

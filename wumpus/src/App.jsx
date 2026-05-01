@@ -12,6 +12,7 @@ function App() {
   const [kb, setKb] = useState(createInitialKB());
   const [inferenceSteps, setInferenceSteps] = useState(0);
   const [safeCells, setSafeCells] = useState([{ row: 0, col: 0 }]);
+  const [visitedCells, setVisitedCells] = useState([{ row: 0, col: 0 }]);
 
   const currentPercepts = getCurrentPercepts(
     agentPosition,
@@ -71,7 +72,14 @@ function App() {
             <button className="green-btn" onClick={updateKnowledge}>
               🧠 Update Knowledge
             </button>
-            <button className="disabled-btn">Step by Step »</button>
+
+            <button className="green-btn" onClick={moveAgentStep}>
+              ▶ Step Move
+            </button>
+
+            <button className="green-btn" onClick={autoSolve}>
+              🤖 Auto Solve
+            </button>
             <button className="disabled-btn">🤖 Auto Solve</button>
           </div>
 
@@ -159,88 +167,162 @@ function App() {
     </div>
   );
 
+  function generateWorld() {
+    setVisitedCells([{ row: 0, col: 0 }]);
+    const pitCount = Math.max(1, Math.floor(rows * cols * 0.05));
+    const usedCells = new Set(["0-0"]);
 
-function generateWorld() {
-  const pitCount = Math.max(1, Math.floor(rows * cols * 0.18));
-  const usedCells = new Set(["0-0"]);
+    const pits = [];
 
-  const pits = [];
+    while (pits.length < pitCount) {
+      const row = Math.floor(Math.random() * rows);
+      const col = Math.floor(Math.random() * cols);
+      const key = `${row}-${col}`;
 
-  while (pits.length < pitCount) {
-    const row = Math.floor(Math.random() * rows);
-    const col = Math.floor(Math.random() * cols);
-    const key = `${row}-${col}`;
-
-    if (!usedCells.has(key)) {
-      pits.push({ row, col });
-      usedCells.add(key);
+      if (!usedCells.has(key)) {
+        pits.push({ row, col });
+        usedCells.add(key);
+      }
     }
+
+    let wumpus = null;
+
+    while (!wumpus) {
+      const row = Math.floor(Math.random() * rows);
+      const col = Math.floor(Math.random() * cols);
+      const key = `${row}-${col}`;
+
+      if (!usedCells.has(key)) {
+        wumpus = { row, col };
+        usedCells.add(key);
+      }
+    }
+
+    // 🔥 Set hazards first
+    setHazards({ pits, wumpus });
+
+    // 🔥 Reset AI state AFTER world is ready
+    const initialKB = createInitialKB();
+    setKb(initialKB);
+    setSafeCells([{ row: 0, col: 0 }]);
+    setInferenceSteps(0);
+    setAgentPosition({ row: 0, col: 0 });
   }
 
-  let wumpus = null;
+  function updateKnowledge() {
+    const updatedKB = addPerceptToKB(
+      kb,
+      agentPosition,
+      currentPercepts,
+      rows,
+      cols,
+      getAdjacentCells,
+    );
 
-  while (!wumpus) {
-    const row = Math.floor(Math.random() * rows);
-    const col = Math.floor(Math.random() * cols);
-    const key = `${row}-${col}`;
+    const neighbors = getAdjacentCells(
+      agentPosition.row,
+      agentPosition.col,
+      rows,
+      cols,
+    );
 
-    if (!usedCells.has(key)) {
-      wumpus = { row, col };
-      usedCells.add(key);
-    }
+    let totalSteps = 0;
+    const newlySafeCells = [...safeCells];
+
+    neighbors.forEach((cell) => {
+      const result = askIfSafe(updatedKB, cell.row, cell.col);
+      totalSteps += result.inferenceSteps;
+
+      if (result.safe) {
+        const alreadyExists = newlySafeCells.some(
+          (safe) => safe.row === cell.row && safe.col === cell.col,
+        );
+
+        if (!alreadyExists) {
+          newlySafeCells.push(cell);
+        }
+      }
+    });
+
+    setKb(updatedKB);
+    setSafeCells(newlySafeCells);
+    setInferenceSteps((prev) => prev + totalSteps);
   }
 
-  // 🔥 Set hazards first
-  setHazards({ pits, wumpus });
-
-  // 🔥 Reset AI state AFTER world is ready
-  const initialKB = createInitialKB();
-  setKb(initialKB);
-  setSafeCells([{ row: 0, col: 0 }]);
-  setInferenceSteps(0);
-  setAgentPosition({ row: 0, col: 0 });
-}
-
-function updateKnowledge() {
+function moveAgentStep() {
   const updatedKB = addPerceptToKB(
     kb,
     agentPosition,
     currentPercepts,
     rows,
     cols,
-    getAdjacentCells,
+    getAdjacentCells
   );
 
   const neighbors = getAdjacentCells(
     agentPosition.row,
     agentPosition.col,
     rows,
-    cols,
+    cols
   );
 
   let totalSteps = 0;
-  const newlySafeCells = [...safeCells];
+  const newSafeCells = [...safeCells];
 
   neighbors.forEach((cell) => {
     const result = askIfSafe(updatedKB, cell.row, cell.col);
     totalSteps += result.inferenceSteps;
 
     if (result.safe) {
-      const alreadyExists = newlySafeCells.some(
-        (safe) => safe.row === cell.row && safe.col === cell.col,
+      const exists = newSafeCells.some(
+        (safe) => safe.row === cell.row && safe.col === cell.col
       );
 
-      if (!alreadyExists) {
-        newlySafeCells.push(cell);
+      if (!exists) {
+        newSafeCells.push(cell);
       }
     }
   });
 
+  const safeMoves = neighbors.filter((cell) =>
+    newSafeCells.some(
+      (safe) => safe.row === cell.row && safe.col === cell.col
+    )
+  );
+
+  const unvisitedSafeMoves = safeMoves.filter(
+    (cell) =>
+      !visitedCells.some(
+        (visited) => visited.row === cell.row && visited.col === cell.col
+      )
+  );
+
+  if (unvisitedSafeMoves.length === 0) {
+    alert("No logically proven safe move available yet.");
+    setKb(updatedKB);
+    setSafeCells(newSafeCells);
+    setInferenceSteps((prev) => prev + totalSteps);
+    return;
+  }
+
+  const nextMove = unvisitedSafeMoves[0];
+
   setKb(updatedKB);
-  setSafeCells(newlySafeCells);
+  setSafeCells(newSafeCells);
   setInferenceSteps((prev) => prev + totalSteps);
+  setAgentPosition(nextMove);
+  setVisitedCells((prev) => [...prev, nextMove]);
 }
 
+  function autoSolve() {
+    const interval = setInterval(() => {
+      updateKnowledge();
+      moveAgentStep();
+    }, 700);
+
+    // stop after some time (avoid infinite loop)
+    setTimeout(() => clearInterval(interval), 10000);
+  }
 }
 
 export default App;
