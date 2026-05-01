@@ -303,3 +303,9 @@ footer {
 .visited-cell {
   border: 2px solid #38bdf8;
 }
+
+.gold-cell {
+  background: radial-gradient(circle, #facc15, #92400e);
+  border-color: #fde68a;
+  box-shadow: 0 0 25px rgba(250, 204, 21, 0.7);
+}

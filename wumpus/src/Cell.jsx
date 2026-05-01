@@ -14,6 +14,11 @@ if (isVisited) {
     (cell) => cell.row === row && cell.col === col
   );
 
+  const hasGold =
+  hazards.gold &&
+  hazards.gold.row === row &&
+  hazards.gold.col === col;
+
   const hasPit = hazards.pits.some(
     (pit) => pit.row === row && pit.col === col
   );
@@ -56,7 +61,11 @@ if (isVisited) {
   else if (hasWumpus) {
     cellClass += " wumpus-cell";
     content = "👾";
-  } 
+  }
+  else if (hasGold) {
+  cellClass += " gold-cell";
+  content = "⭐";
+}
   else {
     let symbols = "";
 
@@ -65,7 +74,7 @@ if (isVisited) {
 
     if (symbols !== "") content = symbols;
   }
-
+  
   if (isAgent) {
     cellClass += " agent-cell";
     content = "🤖";

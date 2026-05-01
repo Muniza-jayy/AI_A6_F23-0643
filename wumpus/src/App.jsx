@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Grid from "./Grid";
 import "./App.css";
 import { getAdjacentCells, getCurrentPercepts } from "./worldLogic";
@@ -8,11 +8,16 @@ function App() {
   const [rows, setRows] = useState(7);
   const [cols, setCols] = useState(4);
   const [agentPosition, setAgentPosition] = useState({ row: 0, col: 0 });
-  const [hazards, setHazards] = useState({ pits: [], wumpus: null });
+  const [hazards, setHazards] = useState({
+    pits: [],
+    wumpus: null,
+    gold: null,
+  });
   const [kb, setKb] = useState(createInitialKB());
   const [inferenceSteps, setInferenceSteps] = useState(0);
   const [safeCells, setSafeCells] = useState([{ row: 0, col: 0 }]);
   const [visitedCells, setVisitedCells] = useState([{ row: 0, col: 0 }]);
+  const [statusMessage, setStatusMessage] = useState("Ready.");
 
   const currentPercepts = getCurrentPercepts(
     agentPosition,
@@ -20,6 +25,22 @@ function App() {
     rows,
     cols,
   );
+  const [isAutoSolving, setIsAutoSolving] = useState(false);
+
+  useEffect(() => {
+    if (!isAutoSolving) return;
+
+    const timer = setTimeout(() => {
+      const moved = moveAgentStep();
+
+      if (!moved) {
+        setIsAutoSolving(false);
+        setStatusMessage("Auto Solve stopped: no safe move found.");
+      }
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [isAutoSolving, agentPosition, safeCells, visitedCells, kb]);
 
   return (
     <div className="app">
@@ -64,7 +85,9 @@ function App() {
             <button className="primary-btn" onClick={generateWorld}>
               🪄 Generate World
             </button>
-            <button className="secondary-btn">↻ Reset World</button>
+            <button className="secondary-btn" onClick={resetWorld}>
+              ↻ Reset World
+            </button>
           </div>
 
           <div className="card cyan-border">
@@ -80,7 +103,6 @@ function App() {
             <button className="green-btn" onClick={autoSolve}>
               🤖 Auto Solve
             </button>
-            <button className="disabled-btn">🤖 Auto Solve</button>
           </div>
 
           <div className="wood-sign">
@@ -102,6 +124,9 @@ function App() {
               <strong>KB Clauses:</strong> {kb.length}
             </p>
             <p>
+              <strong>Status:</strong> {statusMessage}
+            </p>
+            <p>
               <strong>Percepts:</strong>{" "}
               {!currentPercepts.breeze && !currentPercepts.stench && "None"}
               {currentPercepts.breeze && "🌀 Breeze "}
@@ -119,6 +144,11 @@ function App() {
             hazards={hazards}
             safeCells={safeCells}
           />
+
+          <p>
+            {" "}
+            <strong>Status:</strong> {statusMessage}
+          </p>
         </section>
 
         <aside className="right-panel">
@@ -167,6 +197,28 @@ function App() {
     </div>
   );
 
+  function resetWorld() {
+    // Reset agent + knowledge
+    setVisitedCells([{ row: 0, col: 0 }]);
+
+    const initialKB = createInitialKB();
+    setKb(initialKB);
+
+    setSafeCells([{ row: 0, col: 0 }]);
+    setInferenceSteps(0);
+    setAgentPosition({ row: 0, col: 0 });
+
+    // 🔥 IMPORTANT: clear world hazards
+    setHazards({
+      pits: [],
+      wumpus: null,
+      gold: null, // keep if you added gold
+    });
+
+    // Optional UI message
+    setStatusMessage("World reset. Generate a new world.");
+  }
+
   function generateWorld() {
     setVisitedCells([{ row: 0, col: 0 }]);
     const pitCount = Math.max(1, Math.floor(rows * cols * 0.05));
@@ -197,9 +249,20 @@ function App() {
         usedCells.add(key);
       }
     }
+    let gold = null;
 
-    // 🔥 Set hazards first
-    setHazards({ pits, wumpus });
+    while (!gold) {
+      const row = Math.floor(Math.random() * rows);
+      const col = Math.floor(Math.random() * cols);
+      const key = `${row}-${col}`;
+
+      if (!usedCells.has(key)) {
+        gold = { row, col };
+        usedCells.add(key);
+      }
+    }
+
+    setHazards({ pits, wumpus, gold });
 
     // 🔥 Reset AI state AFTER world is ready
     const initialKB = createInitialKB();
@@ -249,79 +312,85 @@ function App() {
     setInferenceSteps((prev) => prev + totalSteps);
   }
 
-function moveAgentStep() {
-  const updatedKB = addPerceptToKB(
-    kb,
-    agentPosition,
-    currentPercepts,
-    rows,
-    cols,
-    getAdjacentCells
-  );
+  function moveAgentStep() {
+    const updatedKB = addPerceptToKB(
+      kb,
+      agentPosition,
+      currentPercepts,
+      rows,
+      cols,
+      getAdjacentCells,
+    );
 
-  const neighbors = getAdjacentCells(
-    agentPosition.row,
-    agentPosition.col,
-    rows,
-    cols
-  );
+    const neighbors = getAdjacentCells(
+      agentPosition.row,
+      agentPosition.col,
+      rows,
+      cols,
+    );
 
-  let totalSteps = 0;
-  const newSafeCells = [...safeCells];
+    let totalSteps = 0;
+    const newSafeCells = [...safeCells];
 
-  neighbors.forEach((cell) => {
-    const result = askIfSafe(updatedKB, cell.row, cell.col);
-    totalSteps += result.inferenceSteps;
+    neighbors.forEach((cell) => {
+      const result = askIfSafe(updatedKB, cell.row, cell.col);
+      totalSteps += result.inferenceSteps;
 
-    if (result.safe) {
-      const exists = newSafeCells.some(
-        (safe) => safe.row === cell.row && safe.col === cell.col
-      );
+      if (result.safe) {
+        const exists = newSafeCells.some(
+          (safe) => safe.row === cell.row && safe.col === cell.col,
+        );
 
-      if (!exists) {
-        newSafeCells.push(cell);
+        if (!exists) {
+          newSafeCells.push(cell);
+        }
       }
+    });
+
+    const safeMoves = neighbors.filter((cell) =>
+      newSafeCells.some(
+        (safe) => safe.row === cell.row && safe.col === cell.col,
+      ),
+    );
+
+    const unvisitedSafeMoves = safeMoves.filter(
+      (cell) =>
+        !visitedCells.some(
+          (visited) => visited.row === cell.row && visited.col === cell.col,
+        ),
+    );
+
+    if (unvisitedSafeMoves.length === 0) {
+      setStatusMessage("No logically proven safe move available yet.");
+      setKb(updatedKB);
+      setSafeCells(newSafeCells);
+      setInferenceSteps((prev) => prev + totalSteps);
+      return;
     }
-  });
 
-  const safeMoves = neighbors.filter((cell) =>
-    newSafeCells.some(
-      (safe) => safe.row === cell.row && safe.col === cell.col
-    )
-  );
-
-  const unvisitedSafeMoves = safeMoves.filter(
-    (cell) =>
-      !visitedCells.some(
-        (visited) => visited.row === cell.row && visited.col === cell.col
-      )
-  );
-
-  if (unvisitedSafeMoves.length === 0) {
-    alert("No logically proven safe move available yet.");
+    const nextMove = unvisitedSafeMoves[0];
+    if (
+      hazards.gold &&
+      nextMove.row === hazards.gold.row &&
+      nextMove.col === hazards.gold.col
+    ) {
+      alert("Gold found! Agent wins!");
+    }
     setKb(updatedKB);
     setSafeCells(newSafeCells);
     setInferenceSteps((prev) => prev + totalSteps);
-    return;
+    setAgentPosition(nextMove);
+    setVisitedCells((prev) => [...prev, nextMove]);
+    setStatusMessage(
+      `Agent moved to (${nextMove.row + 1}, ${nextMove.col + 1})`,
+    );
+
+    return true;
   }
 
-  const nextMove = unvisitedSafeMoves[0];
-
-  setKb(updatedKB);
-  setSafeCells(newSafeCells);
-  setInferenceSteps((prev) => prev + totalSteps);
-  setAgentPosition(nextMove);
-  setVisitedCells((prev) => [...prev, nextMove]);
-}
-
   function autoSolve() {
-    const interval = setInterval(() => {
-      updateKnowledge();
-      moveAgentStep();
-    }, 700);
-
-    // stop after some time (avoid infinite loop)
-    setTimeout(() => clearInterval(interval), 10000);
+    setStatusMessage("Auto Solve started.");
+    setIsAutoSolving(true);
   }
 }
 
